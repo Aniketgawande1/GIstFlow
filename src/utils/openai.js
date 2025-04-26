@@ -1,178 +1,292 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Replace 'YOUR_OPENAI_API_KEY' with your actual OpenAI API key
-// WARNING: For production applications, NEVER hardcode your API key directly in your code
-// Instead, use environment variables (process.env.OPENAI_API_KEY)
-const API_KEY = 'YOUR_OPENAI_API_KEY';
+// Debug log to check environment variables
+console.log('Environment variables available:', {
+  VITE_OPENROUTER_API_KEY: import.meta.env.VITE_OPENROUTER_API_KEY ? 'defined' : 'undefined',
+  NODE_ENV: import.meta.env.MODE
+});
 
-export const summarizeText = async (studyNotes, style) => {
-  // Validate input
-  if (!studyNotes || studyNotes.trim() === '') {
-    throw new Error('Study notes cannot be empty');
+// TEMPORARY: For testing OpenRouter integration
+// Replace this with your actual OpenRouter API key for testing
+// IMPORTANT: Remove this before committing your code
+const TEMP_API_KEY = "sk-or-v1-your-actual-openrouter-key-here"; // Add your OpenRouter API key here
+
+// Configuration for OpenRouter
+const config = {
+  // TEMPORARY: Use hardcoded key for testing
+  apiKey: import.meta.env.VITE_OPENROUTER_API_KEY || TEMP_API_KEY,
+  apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
+  defaultModel: 'openai/gpt-3.5-turbo',
+  fallbackModel: 'anthropic/claude-instant-v1',
+  maxRetries: 2,
+  timeout: 30000,
+  httpReferrer: window.location.origin,
+  appName: 'GistFlow'
+};
+
+// Log the actual config for debugging
+console.log('API Config (key masked):', {
+  ...config,
+  apiKey: config.apiKey ? `${config.apiKey.slice(0, 5)}...${config.apiKey.slice(-4)}` : 'not set'
+});
+
+// Disable mock data to test OpenRouter
+const USE_MOCK_DATA = false;
+
+// Style configurations - this was missing from your code
+const styleConfigs = {
+  concise: {
+    systemMessage: 'You are a helpful assistant that creates concise, review-friendly study summaries.',
+    prompt: `Summarize the following study notes in a concise format:
+    
+{studyNotes}
+
+Provide the summary in this exact format:
+1. Summary: [concise overview of key concepts]
+2. Key Terms & Concepts:
+- [term1]: [definition]
+- [term2]: [definition]
+3. Exam Tips:
+- [tip1]
+- [tip2]`
+  },
+  detailed: {
+    systemMessage: 'You are a expert academic assistant that creates comprehensive study guides.',
+    prompt: `Create a detailed study guide from these notes:
+    
+{studyNotes}
+
+Include in your response (use exactly these headers):
+1. Summary: [thorough overview]
+2. Key Terms & Concepts:
+- [term1]: [detailed definition]
+- [term2]: [detailed definition]
+3. Exam Tips:
+- [substantive guidance]
+- [practice questions if applicable]`
+  },
+  'key-concepts': {
+    systemMessage: 'You are a helpful assistant that extracts and explains key concepts.',
+    prompt: `Extract ONLY the key concepts from these notes:
+    
+{studyNotes}
+
+Format your response exactly as:
+1. Summary: [brief concept overview]
+2. Key Terms & Concepts:
+- [term1]: [precise definition]
+- [term2]: [precise definition]
+3. Exam Tips: [brief importance notes]`
+  },
+  'exam-focus': {
+    systemMessage: 'You are an exam preparation specialist that creates targeted study guides.',
+    prompt: `Create an exam-focused guide from these notes:
+    
+{studyNotes}
+
+Provide in this exact format:
+1. Summary: [exam-relevant highlights]
+2. Key Terms & Concepts:
+- [term1]: [exam-focused definition]
+- [term2]: [exam-focused definition]
+3. Exam Tips:
+- [predicted question types]
+- [answer strategies]
+- [common mistakes]`
+  }
+};
+
+// Mock data for development and testing
+const MOCK_RESPONSES = {
+  'concise': {
+    summary: 'This is a mock summary for the concise style. It contains key points from the provided study notes in a compact format.',
+    keyTerms: '- Mock Term 1: Definition for mock term 1\n- Mock Term 2: Definition for mock term 2\n- Mock Term 3: Definition for mock term 3',
+    examTips: '- Focus on understanding the core concepts\n- Practice with example problems\n- Review key definitions before the exam'
+  },
+  'detailed': {
+    summary: 'This is a comprehensive mock summary for the detailed style. It provides an in-depth overview of all important concepts mentioned in the study notes.',
+    keyTerms: '- Mock Term 1: Detailed definition explaining the context and importance of mock term 1\n- Mock Term 2: Thorough explanation of mock term 2 with examples\n- Mock Term 3: Complete breakdown of mock term 3 and its applications',
+    examTips: '- Create a structured study plan covering all topics\n- Work through practice problems from each section\n- Form study groups to discuss complex topics\n- Create flashcards for key terms'
+  },
+  'key-concepts': {
+    summary: 'This mock summary focuses only on the essential concepts from the provided notes.',
+    keyTerms: '- Key Mock Term 1: Precise definition\n- Key Mock Term 2: Precise definition\n- Key Mock Term 3: Precise definition',
+    examTips: 'Focus exclusively on understanding the key terms and their relationships'
+  },
+  'exam-focus': {
+    summary: 'This mock summary is optimized for exam preparation, highlighting testable concepts.',
+    keyTerms: '- Mock Term 1: Definition as it might appear in an exam question\n- Mock Term 2: Explanation with common exam applications\n- Mock Term 3: Definition with emphasis on frequently tested aspects',
+    examTips: '- Look for questions that ask to compare and contrast concepts\n- Prepare for multiple-choice and short answer formats\n- Common mistake: confusing Term 1 and Term 2\n- Practice time management with sample questions'
+  }
+};
+
+/**
+ * Validates the input parameters
+ */
+const validateInput = (studyNotes, style) => {
+  if (!studyNotes || typeof studyNotes !== 'string' || studyNotes.trim() === '') {
+    throw new Error('Study notes must be a non-empty string');
   }
 
-  // Create appropriate prompt based on selected style
-  let prompt;
-  
-  switch (style) {
-    case 'concise':
-      prompt = `Summarize the following study notes in a concise, review-friendly format:
-      
-${studyNotes}
-
-Provide the summary in the following format:
-1. Summary: A concise overview of the key concepts and information
-2. Key Terms & Concepts: Bullet points of important definitions and concepts
-3. Exam Tips: Bullet points highlighting possible exam questions or focus areas`;
-      break;
-    
-    case 'detailed':
-      prompt = `Create a comprehensive study guide from the following notes:
-      
-${studyNotes}
-
-Include in your response:
-1. Summary: A thorough overview of all important concepts and their relationships
-2. Key Terms & Concepts: A detailed glossary of important terms with complete definitions
-3. Exam Tips: Substantive guidance on how to approach potential exam questions on this material`;
-      break;
-    
-    case 'key-concepts':
-      prompt = `Extract ONLY the key concepts and definitions from the following study notes:
-      
-${studyNotes}
-
-Format your response as:
-1. Summary: A very brief overview that connects the key concepts
-2. Key Terms & Concepts: A comprehensive list of all important terms, theories, formulas, and definitions
-3. Exam Tips: Brief notes on which concepts are likely most important for exams`;
-      break;
-    
-    case 'exam-focus':
-      prompt = `Transform these study notes into an exam-focused review guide:
-      
-${studyNotes}
-
-Create an exam preparation guide with:
-1. Summary: Highlight only the most exam-relevant information
-2. Key Terms & Concepts: Focus on definitions and concepts most likely to appear on exams
-3. Exam Tips: Detailed strategies for answering potential questions, practice problems where possible, and focus areas`;
-      break;
-    
-    default:
-      prompt = `Summarize these study notes:
-      
-${studyNotes}
-
-Provide:
-1. Summary
-2. Key Terms & Concepts
-3. Exam Tips`;
+  if (!style || !styleConfigs[style]) {
+    throw new Error(`Invalid style. Choose from: ${Object.keys(styleConfigs).join(', ')}`);
   }
 
+  if (!config.apiKey) {
+    throw new Error('OpenRouter API key is not configured');
+  }
+};
+
+/**
+ * Generates a study summary from notes
+ */
+export const summarizeText = async (studyNotes, style = 'concise', retryCount = 0) => {
   try {
-    // Make API request to OpenAI
-    console.log('Sending request to OpenAI API...');
+    validateInput(studyNotes, style);
+
+    if (USE_MOCK_DATA) {
+      console.log('Using mock data for development');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return MOCK_RESPONSES[style];
+    }
+
+    // Detailed console logs for debugging
+    console.log('Preparing to call OpenRouter API...');
+    console.log('Using model:', config.defaultModel);
+    console.log('Endpoint:', config.apiEndpoint);
+    
+    const configStyle = styleConfigs[style];
+    const prompt = configStyle.prompt.replace('{studyNotes}', studyNotes);
+
+    console.log('Sending request to OpenRouter API...');
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      config.apiEndpoint,
       {
-        model: 'gpt-3.5-turbo', // More affordable option than gpt-4
+        model: config.defaultModel,
         messages: [
-          { role: 'system', content: 'You are a helpful assistant that summarizes study notes and creates exam guides.' },
+          { role: 'system', content: configStyle.systemMessage },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.5, // More deterministic output
-        max_tokens: 2048  // Ensure we get a substantial response
+        temperature: 0.3, // Lower temperature for more focused responses
+        max_tokens: 1024, // Reduced from 2048 for faster response
+        top_p: 0.8 // Add top_p parameter for more focused output
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`
-        }
+          'Authorization': `Bearer ${config.apiKey}`,
+          'HTTP-Referer': config.httpReferrer,
+          'X-Title': config.appName
+        },
+        timeout: config.timeout
       }
     );
 
-    // Extract content from response
-    const content = response.data.choices[0].message.content;
-    console.log('Received response from OpenAI API');
-    
-    // Parse the response into sections
-    const sections = {
-      summary: '',
-      keyTerms: '',
-      examTips: ''
-    };
-    
-    // Parse the content into sections
-    // This handles variations in how OpenAI might format the response
-    if (content.includes('Summary:') || content.includes('SUMMARY')) {
-      // Find the summary section
-      let summaryStart = content.indexOf('Summary:');
-      if (summaryStart === -1) summaryStart = content.indexOf('SUMMARY');
-      summaryStart = content.indexOf(':', summaryStart) + 1;
-      
-      // Find the end of the summary section
-      let summaryEnd = content.length;
-      if (content.includes('Key Terms')) {
-        summaryEnd = content.indexOf('Key Terms');
-      } else if (content.includes('KEY TERMS')) {
-        summaryEnd = content.indexOf('KEY TERMS');
-      } else if (content.includes('Key Concepts')) {
-        summaryEnd = content.indexOf('Key Concepts');
-      }
-      
-      sections.summary = content.substring(summaryStart, summaryEnd).trim();
+    // Log the response status for debugging
+    console.log('OpenRouter API response status:', response.status);
+    console.log('Response data structure:', Object.keys(response.data));
+
+    const content = response.data.choices[0]?.message?.content;
+    if (!content) {
+      console.error('Empty content in response:', response.data);
+      throw new Error('No content in API response');
     }
-    
-    // Find the key terms section
-    if (content.includes('Key Terms') || content.includes('KEY TERMS') || content.includes('Key Concepts')) {
-      let keyTermsStart = content.indexOf('Key Terms');
-      if (keyTermsStart === -1) keyTermsStart = content.indexOf('KEY TERMS');
-      if (keyTermsStart === -1) keyTermsStart = content.indexOf('Key Concepts');
-      keyTermsStart = content.indexOf(':', keyTermsStart) + 1;
-      
-      // Find the end of the key terms section
-      let keyTermsEnd = content.length;
-      if (content.includes('Exam Tips')) {
-        keyTermsEnd = content.indexOf('Exam Tips');
-      } else if (content.includes('EXAM TIPS')) {
-        keyTermsEnd = content.indexOf('EXAM TIPS');
-      }
-      
-      sections.keyTerms = content.substring(keyTermsStart, keyTermsEnd).trim();
-    }
-    
-    // Find the exam tips section
-    if (content.includes('Exam Tips') || content.includes('EXAM TIPS')) {
-      let examTipsStart = content.indexOf('Exam Tips');
-      if (examTipsStart === -1) examTipsStart = content.indexOf('EXAM TIPS');
-      examTipsStart = content.indexOf(':', examTipsStart) + 1;
-      
-      sections.examTips = content.substring(examTipsStart).trim();
-    }
-    
-    return sections;
-    
+
+    console.log('Received valid response from OpenRouter API');
+    return parseResponse(content);
+
   } catch (error) {
-    console.error('Error calling OpenAI API:', error.response?.data || error.message);
+    // Detailed error logging
+    console.error('Error in summarizeText:', error);
     
-    // Provide more helpful error messages based on common issues
-    if (error.response?.status === 401) {
-      throw new Error('Authentication error: Please check your OpenAI API key');
-    } else if (error.response?.status === 429) {
-      throw new Error('Rate limit exceeded: Too many requests or you have exceeded your OpenAI quota');
-    } else if (error.response?.status === 500) {
-      throw new Error('OpenAI server error: Please try again later');
+    if (error.response) {
+      console.error('Error response status:', error.response.status);
+      console.error('Error response headers:', error.response.headers);
+      console.error('Error response data:', error.response.data);
+      
+      // Create user-friendly error messages
+      switch (error.response.status) {
+        case 401:
+          throw new Error('Authentication failed - invalid API key');
+        case 402:
+          throw new Error('Payment required - check your OpenRouter account balance');
+        case 403:
+          throw new Error('Access forbidden - your account may have restrictions');
+        case 404:
+          throw new Error('API endpoint not found - check the URL');
+        case 429:
+          throw new Error('Rate limit exceeded - please try again later');
+        case 500:
+        case 502:
+        case 503:
+          throw new Error('OpenRouter server error - please try again later');
+        default:
+          throw new Error(`API request failed with status ${error.response.status}: ${error.response.data?.error?.message || 'Unknown error'}`);
+      }
+    } else if (error.request) {
+      console.error('No response received from server');
+      throw new Error('No response received from OpenRouter - check your internet connection');
+    } else {
+      // This could be a validation error or other error
+      throw error;
     }
-    
-    throw new Error('Failed to generate study summary: ' + (error.message || 'Unknown error'));
   }
 };
 
-// Helper function to verify API key is set
 export const verifyApiKey = () => {
-  if (!API_KEY || API_KEY === 'YOUR_OPENAI_API_KEY') {
-    return false;
-  }
-  return true;
+  return Boolean(config.apiKey);
+};
+
+export const getAvailableStyles = () => {
+  return Object.keys(styleConfigs);
+};
+
+// Parse the API response into structured sections
+const parseResponse = (content) => {
+  const sections = {
+    summary: '',
+    keyTerms: '',
+    examTips: ''
+  };
+
+  // Helper function to extract section
+  const extractSection = (content, possibleHeaders) => {
+    for (const header of possibleHeaders) {
+      const startIdx = content.indexOf(header);
+      if (startIdx !== -1) {
+        const sectionStart = content.indexOf(':', startIdx) + 1;
+        let sectionEnd = content.length;
+
+        // Look for the next section header
+        const nextHeaders = [
+          '2. Key Terms', 'Key Terms & Concepts', 'KEY TERMS',
+          '3. Exam Tips', 'Exam Tips', 'EXAM TIPS'
+        ].filter(h => h !== header);
+
+        for (const nextHeader of nextHeaders) {
+          const idx = content.indexOf(nextHeader, sectionStart);
+          if (idx !== -1 && idx < sectionEnd) {
+            sectionEnd = idx;
+          }
+        }
+
+        return content.substring(sectionStart, sectionEnd).trim();
+      }
+    }
+    return '';
+  };
+
+  sections.summary = extractSection(content, [
+    '1. Summary', 'Summary:', 'SUMMARY'
+  ]);
+
+  sections.keyTerms = extractSection(content, [
+    '2. Key Terms', 'Key Terms & Concepts:', 'KEY TERMS'
+  ]);
+
+  sections.examTips = extractSection(content, [
+    '3. Exam Tips', 'Exam Tips:', 'EXAM TIPS'
+  ]);
+
+  return sections;
 };
