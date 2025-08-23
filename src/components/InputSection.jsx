@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { BookOpenIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
-import { summarizeText } from '../utils/openai';
+import { summarizeText } from '../utils/gemini';
 
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 

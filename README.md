@@ -1,25 +1,28 @@
 # GistFlow - Study Notes Summarizer
 
-GistFlow is a web application that helps users summarize their study notes into concise, detailed, or exam-focused formats using AI-powered language models. It supports text input, file uploads, and multiple summarization styles to suit different learning needs.
+GistFlow is a modern web application that transforms your lengthy study materials into organized, AI-powered summaries. Built with React and powered by Google's Gemini AI, it helps students and learners efficiently process and understand complex study notes through intelligent summarization.
 
 ## Features
 
-- **AI-Powered Summarization**: Generate summaries using OpenRouter's AI models.
-- **Multiple Summarization Styles**:
-  - **Quick Review**: Concise summaries for quick revision.
-  - **Comprehensive Study**: Detailed summaries for in-depth understanding.
-  - **Key Concepts Only**: Focus on the most important terms and concepts.
-  - **Exam-Focused**: Tailored summaries for exam preparation.
-- **File Upload Support**: Upload `.txt` files for summarization.
-- **Dark Mode**: Fully responsive design with a sleek zero-black theme for OLED screens.
-- **Real-Time Feedback**: Toast notifications for user actions and errors.
+- **AI-Powered Summarization**: Generate intelligent summaries using Google's Gemini 1.5 Flash model
+- **Four Distinct Summary Styles**:
+  - **Quick Review**: Concise summaries with key takeaways and essential terms
+  - **Comprehensive**: Detailed study guides with learning objectives and real-world examples  
+  - **Key Concepts**: Focus on foundational concepts and their relationships
+  - **Exam-Focused**: Prioritized topics, practice questions, and exam strategies
+- **Smart File Upload**: Upload `.txt` files up to 1MB for instant processing
+- **Modern UI**: Beautiful, responsive design with dark mode support
+- **Real-Time Feedback**: Instant toast notifications and loading states
+- **Markdown Support**: Rich text rendering with proper formatting
 
 ## Technologies Used
 
-- **Frontend**: React, TailwindCSS, Framer Motion
-- **Backend API**: OpenRouter API for AI summarization
-- **Styling**: TailwindCSS with a custom zero-black theme
+- **Frontend**: React 18, Vite, TailwindCSS, Framer Motion
+- **AI Integration**: Google Gemini 1.5 Flash API
+- **UI Components**: React Markdown, Heroicons, Lucide React
+- **Styling**: TailwindCSS with modern gradient themes
 - **Notifications**: React Hot Toast
+- **Build Tool**: Vite for fast development and optimized builds
 
 ## Installation
 
@@ -34,10 +37,12 @@ GistFlow is a web application that helps users summarize their study notes into 
    npm install
    ```
 
-3. Create a `.env` file in the root directory and add your OpenRouter API key:
+3. Create a `.env` file in the root directory and add your Google Gemini API key:
    ```env
-   VITE_OPENROUTER_API_KEY=your-openrouter-api-key
+   VITE_GEMINI_API_KEY=your-gemini-api-key
    ```
+   
+   Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
 4. Start the development server:
    ```bash
@@ -51,33 +56,56 @@ GistFlow is a web application that helps users summarize their study notes into 
 
 ## Usage
 
-1. Paste your study notes into the text area or upload a `.txt` file.
-2. Select a summarization style:
-   - Quick Review
-   - Comprehensive Study
-   - Key Concepts Only
-   - Exam-Focused
-3. Click the **Generate Study Summary** button.
-4. View the generated summary, key terms, and exam tips.
+1. **Input your study material**: Paste text directly into the text area or upload a `.txt` file
+2. **Choose your summary style**:
+   - **Quick Review**: For rapid revision and key points
+   - **Comprehensive**: For thorough understanding with examples
+   - **Key Concepts**: For concept mapping and relationships  
+   - **Exam-Focused**: For test preparation with practice questions
+3. **Generate**: Click "Generate Study Summary" and wait for AI processing
+4. **Study**: Review your organized summary with formatted sections, key terms, and actionable insights
+
+## Example Output
+
+Each summary style provides different structured sections:
+- **Key Takeaways**: Most important points to remember
+- **Essential Terms**: Definitions and explanations
+- **Quick Facts**: Formulas, dates, and memory aids
+- **Practice Questions**: Self-assessment opportunities (Exam-Focused)
+- **Learning Objectives**: Clear goals (Comprehensive)
+- **Concept Relationships**: How ideas connect (Key Concepts)
 
 ## Project Structure
 
 ```
 gistflow/
-├── public/                 # Static assets
-├── src/
-│   ├── components/         # React components
-│   │   ├── InputSection.jsx
-│   │   ├── SummaryDisplay.jsx
-│   ├── utils/              # Utility functions
-│   │   ├── openai.js       # API integration with OpenRouter
-│   ├── App.jsx             # Main app component
-│   ├── main.jsx            # Entry point
-│   ├── index.css           # Global styles
-├── .env                    # Environment variables
-├── package.json            # Project dependencies
-├── tailwind.config.js      # TailwindCSS configuration
-├── vite.config.js          # Vite configuration
+├── .env                     # Environment variables (Gemini API key)
+├── .git/                    # Git repository data
+├── .gitignore               # Git ignore rules
+├── README.md                # Project documentation
+├── eslint.config.js         # ESLint configuration
+├── index.html               # Main HTML template
+├── package.json             # Dependencies and scripts
+├── package-lock.json        # Dependency lock file
+├── vite.config.js           # Vite build configuration
+├── node_modules/            # Installed dependencies
+├── public/                  # Static assets
+│   └── vite.svg            # Vite logo
+└── src/                     # Source code
+    ├── App.css              # Main app styles
+    ├── App.jsx              # Main application component
+    ├── index.css            # Global styles and Tailwind imports
+    ├── main.jsx             # React entry point
+    ├── assets/              # Static images and icons
+    │   └── react.svg        # React logo
+    ├── components/          # React components
+    │   ├── Footer.jsx       # Page footer component
+    │   ├── Header.jsx       # Navigation header component
+    │   ├── InputSection.jsx # File upload and text input
+    │   ├── LoadingSpinner.jsx # Loading animations
+    │   └── SummarySection.jsx # Summary display and formatting
+    └── utils/               # Utility functions
+        └── gemini.js        # Google Gemini API integration
 ```
 
 ## Screenshots
@@ -90,23 +118,50 @@ gistflow/
 
 ## API Integration
 
-This project uses the **OpenRouter API** for AI-powered summarization. Ensure you have a valid API key from OpenRouter.
+This project integrates with **Google's Gemini 1.5 Flash API** for intelligent text summarization. The AI model provides contextual understanding and generates structured summaries tailored to different learning styles.
 
 ### API Configuration
 
-- **Endpoint**: `https://openrouter.ai/api/v1/chat/completions`
-- **Headers**:
-  - `Authorization: Bearer <API_KEY>`
-  - `HTTP-Referer: <your-site-url>`
-  - `X-Title: GistFlow`
+- **Model**: `gemini-1.5-flash` (Google's latest fast model)
+- **Provider**: Google AI Studio
+- **Features**: 
+  - Advanced text analysis and summarization
+  - Context-aware content generation
+  - Multiple output formats and styles
+  - Safety filtering and content moderation
+
+### Environment Setup
+
+```env
+VITE_GEMINI_API_KEY=your_api_key_here
+```
+
+Get your free API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
 ## Customization
 
-### Change Theme
-To modify the theme, update the TailwindCSS configuration in `tailwind.config.js` or override styles in `index.css`.
+### Modify Summary Styles
+To add or customize summarization styles, update the `promptTemplates` object in `src/utils/gemini.js`:
 
-### Add New Summarization Styles
-To add new summarization styles, update the `styleConfigs` object in `src/utils/openai.js`.
+```javascript
+const promptTemplates = {
+  'your-style': (studyNotes, topicName) => `
+    Your custom prompt template here...
+  `
+};
+```
+
+### Theme Customization
+GistFlow uses TailwindCSS with a modern gradient theme. Customize colors and styling in:
+- `tailwind.config.js` - Theme configuration
+- `src/index.css` - Global styles
+- Component files - Individual component styling
+
+### Add New Features
+The modular architecture makes it easy to extend:
+- Add new components in `src/components/`
+- Extend AI functionality in `src/utils/gemini.js`
+- Modify the main layout in `src/App.jsx`
 
 ## Contributing
 
@@ -128,11 +183,13 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Acknowledgments
 
-- [OpenRouter](https://openrouter.ai) for providing the AI API.
-- [TailwindCSS](https://tailwindcss.com) for styling.
-- [Framer Motion](https://www.framer.com/motion/) for animations.
-- [React Hot Toast](https://react-hot-toast.com) for notifications.
+- [Google AI](https://ai.google.dev/) for providing the Gemini API
+- [TailwindCSS](https://tailwindcss.com) for the utility-first CSS framework
+- [Framer Motion](https://www.framer.com/motion/) for smooth animations
+- [React Hot Toast](https://react-hot-toast.com) for elegant notifications
+- [Heroicons](https://heroicons.com) and [Lucide](https://lucide.dev) for beautiful icons
+- [Vite](https://vitejs.dev) for lightning-fast development experience
 
 ---
 
-**GistFlow** - Simplify your study sessions with AI-powered summaries!
+**GistFlow** - Transform your study experience with AI-powered insights! 🚀📚
