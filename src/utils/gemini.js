@@ -3,8 +3,23 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
-// System prompt (optional)
-const SYSTEM_PROMPT = `You are an expert study assistant. Create clear, concise study summaries with key points, important terms, and useful facts. Keep explanations brief and student-friendly.`;
+// System prompt and configuration
+const SYSTEM_PROMPT = `You are an expert study assistant specialized in creating comprehensive and clear summaries. Focus on:
+1. Breaking down complex topics into digestible chunks
+2. Highlighting key concepts and their relationships
+3. Providing clear, concrete examples
+4. Creating memorable learning points
+5. Ensuring logical flow and progression of ideas
+
+Format all output in clear Markdown for better readability.`;
+
+// Gemini model configuration
+const modelConfig = {
+  temperature: 0.7,
+  topP: 0.8,
+  topK: 40,
+  maxOutputTokens: 2048,
+};
 
 // Different prompt templates for each style
 const promptTemplates = {
@@ -33,36 +48,49 @@ ${studyNotes}
 Keep it concise and focused on the essentials.`,
 
   detailed: (studyNotes, topicName) => `
-Create a comprehensive study guide for the following notes:
+Create a clear and structured comprehensive study guide that breaks down the following notes into easily digestible sections:
 
 # ${topicName} - Comprehensive Study Guide
 
-## 🎯 Learning Objectives
-What students should be able to do after studying this:
-1. [Objective 1]
-2. [Objective 2]
-3. [Objective 3]
+## 📝 Summary
+Provide a 2-3 sentence overview of the main topic.
 
-## 📖 Core Concepts
-### Concept 1: [Name]
-**Definition:** Clear explanation
-**Why it matters:** Practical importance
-**Key characteristics:**
-- Feature 1
-- Feature 2
+## 🎯 Key Learning Points
+1. [Most important point] - Brief explanation
+2. [Second key point] - Brief explanation
+3. [Third key point] - Brief explanation
 
-### Concept 2: [Name]
-**Definition:** Clear explanation
-**Why it matters:** Practical importance
+## � Core Concepts
+For each main concept:
+- **What it is:** Clear, concise definition
+- **Why it matters:** Real-world relevance
+- **How it works:** Step-by-step breakdown
+- **Remember:** Quick memory aid or tip
 
-## 💡 Real-World Examples
-- **Example 1:** [Situation and application]
-- **Example 2:** [Situation and application]
+## 🔍 Detailed Breakdown
+### Section 1: [Main Topic]
+- Key idea 1
+  - Supporting detail
+  - Example
+- Key idea 2
+  - Supporting detail
+  - Example
 
-## 🧠 Study Strategies
-- [Specific study tip]
-- [Memory technique]
-- [Practice recommendation]
+## 💡 Examples & Applications
+1. [Simple example] - Start with basic application
+2. [Complex example] - Show advanced usage
+3. [Real-world case] - Practical application
+
+## ⚡ Quick Reference
+- [Quick fact 1]
+- [Quick fact 2]
+- [Quick fact 3]
+
+## 🎓 Check Your Understanding
+Three quick self-test questions:
+1. [Question about basic concept]
+2. [Question about application]
+3. [Question about relationships between concepts]
 
 ---
 Study Material:
